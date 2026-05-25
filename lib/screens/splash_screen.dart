@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'dart:async';
+import 'package:video_player/video_player.dart';
 
 class SplashScreen extends StatefulWidget {
   final String nextRoute;
+
   const SplashScreen({super.key, this.nextRoute = '/login'});
 
   @override
@@ -11,106 +14,171 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  int _step = 0;
-  Timer? _timer;
+  late final VideoPlayerController _videoController;
+  Timer? _navigationTimer;
+
+  static const String _videoPath = 'assets/trashquest_loading_animation_cropped.mp4';
 
   @override
   void initState() {
     super.initState();
-    _startAnimation();
+    _initializeVideo();
+    _startNavigationTimer();
   }
 
-  void _startAnimation() {
-    _timer = Timer.periodic(const Duration(milliseconds: 1200), (timer) {
-      if (!mounted) return;
-      setState(() {
-        _step++;
-      });
-      if (_step >= 3) {
-        timer.cancel();
-        Future.delayed(const Duration(milliseconds: 1500), () {
-          if (mounted) context.go(widget.nextRoute);
-        });
+  Future<void> _initializeVideo() async {
+    _videoController = VideoPlayerController.asset(_videoPath);
+
+    await _videoController.initialize();
+
+    if (!mounted) return;
+
+    setState(() {});
+
+    _videoController
+      ..setLooping(true)
+      ..setVolume(0)
+      ..play();
+  }
+
+  void _startNavigationTimer() {
+    _navigationTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) {
+        context.go(widget.nextRoute);
       }
     });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _navigationTimer?.cancel();
+    _videoController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryGreen = Color(0xFF2E7D32);
+    const Color lightGreenBackground = Color(0xFFE8F5E9);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFE8F5E9),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 600),
-              transitionBuilder: (child, animation) => FadeTransition(
-                opacity: animation,
-                child: ScaleTransition(scale: animation, child: child),
-              ),
-              child: _buildAnimationStep(),
+      backgroundColor: lightGreenBackground,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(5),
+                  decoration: BoxDecoration(
+                    color: primaryGreen,
+                    borderRadius: BorderRadius.circular(28),
+                    boxShadow: [
+                      BoxShadow(
+                        color: primaryGreen.withOpacity(0.25),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(26),
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 380),
+                      color: Colors.white,
+                      child: _videoController.value.isInitialized
+                          ? AspectRatio(
+                              aspectRatio: _videoController.value.aspectRatio,
+                              child: VideoPlayer(_videoController),
+                            )
+                          : const SizedBox(
+                              width: 380,
+                              height: 214,
+                              child: Center(
+                                child: Text(
+                                  'TrashQuest',
+                                  style: TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.bold,
+                                    color: primaryGreen,
+                                  ),
+                                ),
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 34),
+
+                const Text(
+                  'Faunia Eco',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 40,
+                    fontWeight: FontWeight.bold,
+                    color: primaryGreen,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                const Text(
+                  'Ellos también viven aquí.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF1B5E20),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  'Cada residuo que reciclas ayuda a proteger el hogar de los animales.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF5F6F61),
+                    fontWeight: FontWeight.w500,
+                    height: 1.45,
+                  ),
+                ),
+
+                const SizedBox(height: 28),
+
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.8),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: primaryGreen.withOpacity(0.25),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: const Text(
+                    'Recicla. Gana puntos. Protege Faunia.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: primaryGreen,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 50),
-            const Text(
-              'Faunia Eco',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF2E7D32),
-              ),
-            ),
-            const SizedBox(height: 10),
-            const Text(
-              'El plástico destruye su hogar.\nAyúdanos a reciclar.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-                height: 1.5,
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
-  }
-
-  Widget _buildAnimationStep() {
-    if (_step == 0) {
-      // Paso 0: Tortuga feliz + Basura cayendo
-      return Row(
-        key: const ValueKey(0),
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Text('🐢', style: TextStyle(fontSize: 80)),
-          SizedBox(width: 30),
-          Text('🥤', style: TextStyle(fontSize: 50)),
-        ],
-      );
-    } else if (_step == 1) {
-      // Paso 1: Tortuga se come la basura
-      return Row(
-        key: const ValueKey(1),
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: const [
-          Text('🐢', style: TextStyle(fontSize: 80)),
-          Text('🥤', style: TextStyle(fontSize: 30)),
-        ],
-      );
-    } else if (_step == 2) {
-      // Paso 2: Tortuga enferma
-      return const Text('🐢🤢', key: ValueKey(2), style: TextStyle(fontSize: 80));
-    } else {
-      // Paso 3: Consecuencia fatal
-      return const Text('☠️', key: ValueKey(3), style: TextStyle(fontSize: 100));
-    }
   }
 }
